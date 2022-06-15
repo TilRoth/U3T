@@ -9,20 +9,20 @@
 CRGB leds[NUM_LEDS];
 
 /* light led at array index */
-void light_led(uint16_t array_index, CRGB color) {
+void light_led(uint8_t array_index, CRGB color) {
   leds[array_index] = color;
 }
 
 /* get the array index for the given cordinates (i,j), i = row, j = column */
-uint16_t index(uint16_t i, uint16_t j) {
+uint8_t index(uint8_t i, uint8_t j) {
   return j & 0x01 ? j * 16 + 15 - i : j * 16 + i;
 }
 
 /* get the array index for the given spot on the given board */
-uint16_t index_board(uint16_t board, uint16_t spot) {
+uint8_t index_board(uint8_t board, uint8_t spot) {
   /* translate to index */
-  uint16_t i = board - (board % 3) + spot / 3;
-  uint16_t j = (board % 3) * 3 + (spot % 3);
+  uint8_t i = board - (board % 3) + spot / 3;
+  uint8_t j = (board % 3) * 3 + (spot % 3);
 
   /* skip game boarders */
   i += i / 3 + 1;
@@ -33,32 +33,32 @@ uint16_t index_board(uint16_t board, uint16_t spot) {
 
 
 /* light led at (i,j) coordinates, i = row, j = column */
-void light_led(uint16_t i, uint16_t j, CRGB color) {
+void light_led(uint8_t i, uint8_t j, CRGB color) {
   light_led(index(i, j), color);
 }
 
 /* light led on game board, board = 0-8, spot = 0-8 */
-void light_led_board(uint16_t board, uint16_t spot, CRGB color) {
+void light_led_board(uint8_t board, uint8_t spot, CRGB color) {
   light_led(index_board(board, spot), color);
 }
 
 /* fill an entire board with the given color */
-void fill_board(uint16_t board, CRGB color) {
-  for (uint16_t spot = 0; spot < NUM_SPOTS; spot++) {
+void fill_board(uint8_t board, CRGB color) {
+  for (uint8_t spot = 0; spot < NUM_SPOTS; spot++) {
     light_led_board(board, spot, color);
   }
 }
 
 /* fill an entire row with the given color */
-void fill_row(uint16_t row, CRGB color) {
-  for (uint16_t column = 0; column < LENGTH; column++) {
+void fill_row(uint8_t row, CRGB color) {
+  for (uint8_t column = 0; column < LENGTH; column++) {
     light_led(row, column, color);
   }
 }
 
 /* fill an entire column with the given color */
-void fill_column(uint16_t column, CRGB color) {
-  for (uint16_t row = 0; row < LENGTH; row++) {
+void fill_column(uint8_t column, CRGB color) {
+  for (uint8_t row = 0; row < LENGTH; row++) {
     light_led(row, column, color);
   }
 }
@@ -78,15 +78,15 @@ void setup() {
 }
 
 void loop() {
-  for (uint16_t board = 0; board < NUM_BOARDS; board++) {
-    for (uint16_t spot = 0; spot < NUM_SPOTS; spot++) {
+  for (uint8_t board = 0; board < NUM_BOARDS; board++) {
+    for (uint8_t spot = 0; spot < NUM_SPOTS; spot++) {
       if (spot % 2) { light_led_board(board, spot, CRGB::Red); }
       else { light_led_board(board, spot, CRGB::Green); }
       FastLED.show();
     }
   }
   delay(500);
-  for (uint16_t board = 0; board < NUM_BOARDS; board++) {
+  for (uint8_t board = 0; board < NUM_BOARDS; board++) {
     fill_board(board, CRGB::Black);
     FastLED.show();
   }
