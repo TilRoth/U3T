@@ -135,7 +135,7 @@ void outlineSmallBoard(uint8_t board, CRGB color){
     uint8_t startcolumn = (board / 3) * 4;
     for (uint8_t i = startrow; i < startrow + 5; ++i) {
         for (uint8_t j = startcolumn; j < startcolumn + 5; ++j) {
-            if ((i - startrow) % 4 != 0 && (j - startcolumn) % 4 != 0){
+            if ((i - startrow) % 4 != 0 and (j - startcolumn) % 4 != 0){
                 continue;
             }
             light_led(j,i, color);
@@ -157,21 +157,21 @@ uint8_t checkBoardStatus(uint8_t board[]){
     for (uint8_t i = 0; i < 3; ++i) {
 
         //check columns
-        if(board[i] != 0 && board[i] == board[i + 3] && board[i] == board[i + 6]){
+        if((board[i] == 1 or board[i] == 2) and board[i] == board[i + 3] and board[i] == board[i + 6]){
             return board[i];
         }
 
         //check rows
-        if(board[i * 3] != 0 && board[i * 3] == board[i * 3 + 1] && board[i * 3] == board[i * 3 + 2]){
+        if((board[i * 3] == 1 or board[i * 3] == 2) and board[i * 3] == board[i * 3 + 1] and board[i * 3] == board[i * 3 + 2]){
             return board[i * 3];
         }
     }
 
     //check diagonals
-    if(board[0] != 0 && board[0] == board[4] && board[4] == board[8]){
+    if((board[0] == 1 or board[0] == 2) and board[0] == board[4] and board[4] == board[8]){
         return board[0];
     }
-    if(board[2] != 0 && board[2] == board[4] && board[4] == board[6]){
+    if((board[2] == 1 or board[2] == 2) and board[2] == board[4] and board[4] == board[6]){
         return board[2];
     }
 
