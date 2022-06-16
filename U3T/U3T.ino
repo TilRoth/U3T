@@ -1,6 +1,4 @@
 #include <FastLED.h>
-#include <Arduino_AVRSTL.h>
-#include <stdint.h>
 
 #define NUM_LEDS 256
 #define DATA_PIN A5
