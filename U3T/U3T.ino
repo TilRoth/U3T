@@ -1,11 +1,15 @@
 #include <FastLED.h>
+#include <LiquidCrystal.h>
+
+const int rs = A4, en = A3, d4 = 13, d5 = 12, d6 = 11, d7 = 10;
+LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 
 #define NUM_LEDS 256
 #define DATA_PIN A5
 #define LENGTH 13
 #define NUM_BOARDS 9
 #define NUM_SPOTS 9
-#define BRIGHTNESS 3
+#define BRIGHTNESS 10
 
 CRGB leds[NUM_LEDS];
 
@@ -82,6 +86,21 @@ void setup() {
     fill_row(8, CRGB::White);
     fill_column(4, CRGB::White);
     fill_column(8, CRGB::White);
+
+    /* Setup LED */
+    lcd.begin(16, 2);
+    lcd.setCursor(0, 0);
+    lcd.print("Ultimate");
+    lcd.setCursor(0,1);
+    lcd.print("Tic-Tac-Toe");
+
+    /* Setup board */
+    outlineBigBoard(CRGB::White);
+    FastLED.show();
+    delay(1000);
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Player 1's Turn");
 }
 
 
