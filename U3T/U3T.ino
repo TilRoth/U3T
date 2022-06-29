@@ -1,4 +1,5 @@
 #include <FastLED.h>
+#include <Keypad.h>
 #include <LiquidCrystal.h>
 
 const int rs = A4, en = A3, d4 = 13, d5 = 12, d6 = 11, d7 = 10;
@@ -9,9 +10,23 @@ LiquidCrystal lcd(rs, en, d4, d5, d6, d7);
 #define LENGTH 13
 #define NUM_BOARDS 9
 #define NUM_SPOTS 9
-#define BRIGHTNESS 10
+#define BRIGHTNESS 3
 
 CRGB leds[NUM_LEDS];
+
+#define BMATRIX_ROWS 3
+#define BMATRIX_COLUMNS 3
+
+char keys[BMATRIX_ROWS][BMATRIX_COLUMNS] = {
+        {1,2,3},
+        {4,5,6},
+        {7,8,9}
+};
+
+byte pin_rows[BMATRIX_ROWS] = {9, 8, 7}; //connect to the row pinouts of the keypad
+byte pin_column[BMATRIX_COLUMNS] = {5, 4, 3}; //connect to the column pinouts of the keypad
+
+Keypad keypad = Keypad(makeKeymap(keys), pin_rows, pin_column, BMATRIX_ROWS, BMATRIX_COLUMNS );
 
 /* light led at array index */
 void light_led(uint8_t array_index, CRGB color) {
@@ -20,6 +35,7 @@ void light_led(uint8_t array_index, CRGB color) {
 
 /* get the array index for the given cordinates (i,j), i = row, j = column */
 uint8_t index(uint8_t i, uint8_t j) {
+    i++; j++;
     return j & 0x01 ? j * 16 + 15 - i : j * 16 + i;
 }
 
@@ -68,19 +84,17 @@ void fill_column(uint8_t column, CRGB color) {
     }
 }
 
+void lcd_show(String line1, String line2 = ""){
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print(line1);
+    lcd.setCursor(0,1);
+    lcd.print(line2);
+}
+
 void setup() {
     FastLED.addLeds<NEOPIXEL, DATA_PIN>(leds, NUM_LEDS);
     FastLED.setBrightness(BRIGHTNESS);
-
-    pinMode(0, INPUT_PULLUP);
-    pinMode(1, INPUT_PULLUP);
-    pinMode(2, INPUT_PULLUP);
-    pinMode(3, INPUT_PULLUP);
-    pinMode(4, INPUT_PULLUP);
-    pinMode(5, INPUT_PULLUP);
-    pinMode(6, INPUT_PULLUP);
-    pinMode(7, INPUT_PULLUP);
-    pinMode(8, INPUT_PULLUP);
 
     fill_row(4, CRGB::White);
     fill_row(8, CRGB::White);
@@ -89,55 +103,12 @@ void setup() {
 
     /* Setup LED */
     lcd.begin(16, 2);
-    lcd.setCursor(0, 0);
-    lcd.print("Ultimate");
-    lcd.setCursor(0,1);
-    lcd.print("Tic-Tac-Toe");
+    lcd_show("Ultimate","Tic-Tac-Toe");
 
     /* Setup board */
     outlineBigBoard(CRGB::White);
     FastLED.show();
     delay(1000);
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Player 1's Turn");
-}
-
-
-uint8_t count = 0;
-uint8_t buttonState[9] = {HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH,HIGH};
-uint8_t lastButtonState[9] = {LOW,LOW,LOW,LOW,LOW,LOW,LOW,LOW,LOW};
-unsigned long lastDebounceTime[9];
-unsigned long debounceDelay = 50;
-
-uint8_t checkButtonPress(){
-    for (uint8_t i = 0; i < 9; ++i) {
-        uint8_t reading = digitalRead(i);
-        if (reading != lastButtonState[i]) {
-            lastDebounceTime[i] = millis();
-        }
-
-        if ((millis() - lastDebounceTime[i]) > debounceDelay) {
-            if (reading != buttonState[i]) {
-                buttonState[i] = reading;
-                if (buttonState[i] == LOW) {
-                    return i;
-                }
-            }
-        }
-
-        lastButtonState[i] = reading;
-    }
-    return 9;
-}
-
-uint8_t waitUntilButtonPress(){
-    FastLED.show();
-    uint8_t res = 9;
-    while(res == 9){
-        res = checkButtonPress();
-    }
-    return res;
 }
 
 void outlineBigBoard(CRGB color){
@@ -170,26 +141,54 @@ uint8_t boards[9][9]; // 0 = empty | 1 = player true/blue | 2 = player false/yel
 
 uint8_t selectedboard = 9; // 9 = choice pending
 
-uint8_t checkBoardStatus(uint8_t board[]){
-    for (uint8_t i = 0; i < 3; ++i) {
-
-        //check columns
-        if((board[i] == 1 or board[i] == 2) and board[i] == board[i + 3] and board[i] == board[i + 6]){
-            return board[i];
+uint8_t waitUntilButtonPress(bool noblink=false){
+    FastLED.show();
+    unsigned long last_blink = millis();
+    bool next_white = true;
+    while(true){
+        uint8_t res = keypad.getKey();
+        if(res){
+            return res-1;
         }
-
-        //check rows
-        if((board[i * 3] == 1 or board[i * 3] == 2) and board[i * 3] == board[i * 3 + 1] and board[i * 3] == board[i * 3 + 2]){
-            return board[i * 3];
+        if(not noblink and selectedboard != 9 and millis() - last_blink > 500){
+            outlineSmallBoard(selectedboard, next_white ? CRGB::White : currentplayer ? CRGB::Blue : CRGB::Yellow);
+            FastLED.show();
+            last_blink = millis();
+            next_white = not next_white;
         }
     }
+}
 
-    //check diagonals
-    if((board[0] == 1 or board[0] == 2) and board[0] == board[4] and board[4] == board[8]){
-        return board[0];
-    }
-    if((board[2] == 1 or board[2] == 2) and board[2] == board[4] and board[4] == board[6]){
-        return board[2];
+template<typename Functor>
+uint8_t checkBoardStatus(uint8_t board[], const Functor &light_spot, String win_string){
+    uint8_t check_lines[8][3] = {{0,1,2},{3,4,5},{6,7,8},
+                                 {0,3,6},{1,4,7},{2,5,8},
+                                 {0,4,8},{2,4,6}};
+
+    for (auto line : check_lines) {
+        uint8_t first = line[0], second = line[1], third = line[2];
+        if((board[first] == 1 or board[first] == 2) and board[first] == board[second] and board[first] == board[third]){
+
+            // show winning string
+            lcd_show("Player " + String(board[first] ? "1" : "2"), win_string);
+
+            // blink winning line
+            CRGB color = board[first] == 1 ? CRGB::Blue : CRGB::Yellow;
+            for (int j = 0; j < 2; ++j) {
+                light_spot(first, color);
+                light_spot(second, color);
+                light_spot(third, color);
+                FastLED.show();
+                delay(500);
+                light_spot(first, CRGB::Black);
+                light_spot(second, CRGB::Black);
+                light_spot(third, CRGB::Black);
+                FastLED.show();
+                delay(500);
+            }
+
+            return board[first];
+        }
     }
 
     for (uint8_t i = 0; i < 9; ++i) {
@@ -200,17 +199,22 @@ uint8_t checkBoardStatus(uint8_t board[]){
     return 3; // no spot empty but no winner => tie
 }
 
+void(* resetFunc) () = nullptr;
+
 void loop() {
-    
+
     if(globalstatus != 0){
+        lcd_show("Player " + String((globalstatus ? "1":"2")) + " Win");
         for (uint8_t i = 0; i < NUM_BOARDS; ++i) {
             fill_board(i, globalstatus == 1 ? CRGB::Blue : globalstatus == 2 ? CRGB::Yellow : CRGB::Red);
-            FastLED.show();
         }
-        delay(10000);
-        return;
+        FastLED.show();
+        waitUntilButtonPress(true);
+        resetFunc();
     }
-    
+
+    lcd_show("Player " + String((currentplayer ? "1":"2")) + "'s Turn");
+
     if (selectedboard == 9){
         outlineBigBoard(currentplayer ? CRGB::Blue : CRGB::Yellow);
         uint8_t selection = waitUntilButtonPress();
@@ -218,16 +222,27 @@ void loop() {
             outlineBigBoard(CRGB::White);
             selectedboard = selection;
         } else {
-            //TODO visual feedback board already finished
+            lcd_show("Invalid move!");
+            for (int i = 0; i < 3; ++i) {
+                if(i > 0){
+                    delay(300);
+                }
+                outlineSmallBoard(selection, CRGB::Red);
+                FastLED.show();
+                delay(300);
+                outlineSmallBoard(selection, CRGB::White);
+                outlineBigBoard(currentplayer ? CRGB::Blue : CRGB::Yellow);
+                FastLED.show();
+            }
         }
     } else {
         outlineSmallBoard(selectedboard, currentplayer ? CRGB::Blue : CRGB::Yellow);
         uint8_t selection = waitUntilButtonPress();
         if (boards[selectedboard][selection] == 0) {
             boards[selectedboard][selection] = currentplayer ? 1 : 2;
-            boardstatus[selectedboard] = checkBoardStatus(boards[selectedboard]);
+            boardstatus[selectedboard] = checkBoardStatus(boards[selectedboard], [](int spot, CRGB color){light_led_board(selectedboard,spot,color);}, "wins the board!");
             if (boardstatus[selectedboard] != 0) {
-                globalstatus = checkBoardStatus(boardstatus);
+                globalstatus = checkBoardStatus(boardstatus, [](int spot, CRGB color){fill_board(spot,color);}, "wins the game!");
                 if(globalstatus == 0){
                     fill_board(selectedboard, boardstatus[selectedboard] == 1 ? CRGB::Blue : boardstatus[selectedboard] == 2 ? CRGB::Yellow : CRGB::Red);
                 }
@@ -238,7 +253,17 @@ void loop() {
             selectedboard = boardstatus[selection] == 0 ? selection : 9;
             currentplayer = not currentplayer;
         }else{
-            //TODO visual feedback cell not empty
+            lcd_show("Invalid move!");
+            for (int i = 0; i < 3; ++i) {
+                if(i > 0){
+                    delay(300);
+                }
+                light_led_board(selectedboard, selection, CRGB::Red);
+                FastLED.show();
+                delay(300);
+                light_led_board(selectedboard, selection, boards[selectedboard][selection] == 1 ? CRGB::Blue : CRGB::Yellow);
+                FastLED.show();
+            }
         }
     }
 
